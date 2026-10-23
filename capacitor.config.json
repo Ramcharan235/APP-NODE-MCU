@@ -1,0 +1,7 @@
+{
+  "appId": "com.nodemcu.control",
+  "appName": "NodeMCU Control",
+  "webDir": "www",
+  "server": { "androidScheme": "http", "cleartext": true },
+  "android": { "allowMixedContent": true }
+}

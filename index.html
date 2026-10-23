@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b1020">
+<title>NodeMCU Controller</title>
+<style>
+:root{--bg:#0b1020;--card:#151c33;--card2:#1c2545;--txt:#eaf0ff;--mut:#8b97bd;--acc:#4f8cff;--acc2:#7c5cff;--ok:#2ee59d;--bad:#ff5d73;--warn:#ffb84d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:150px}
+header{padding:22px 18px 8px;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:22px;font-weight:700}
+header p{margin:2px 0 0;color:var(--mut);font-size:13px}
+.pill{display:flex;align-items:center;gap:7px;background:var(--card);padding:8px 12px;border-radius:99px;font-size:12px;color:var(--mut)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--bad)}
+.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+main{padding:8px 16px;display:grid;gap:14px;max-width:560px;margin:auto}
+.card{background:linear-gradient(160deg,var(--card),var(--card2));border-radius:22px;padding:16px;box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.card h2{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px;font-weight:600}
+.card h2 .ic{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-size:16px}
+.disabled{opacity:.45;pointer-events:none}
+/* car */
+.dpad{display:grid;grid-template-columns:repeat(3,76px);grid-template-rows:repeat(3,76px);gap:10px;justify-content:center}
+.dpad button{border:0;border-radius:20px;background:#232d55;color:var(--txt);font-size:28px;transition:.1s}
+.dpad button:active,.dpad button.hold{background:linear-gradient(135deg,var(--acc),var(--acc2));transform:scale(.94)}
+.dpad .stop{background:#4a2330;color:var(--bad);font-size:15px;font-weight:700}
+.hint{color:var(--mut);font-size:12px;text-align:center;margin-top:10px}
+/* relays */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.relay{background:#1e2850;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px;border:1px solid transparent;transition:.2s}
+.relay.on{border-color:var(--ok);background:#143a3a}
+.relay .top{display:flex;justify-content:space-between;align-items:center}
+.relay .ico{font-size:22px}
+.relay .nm{font-size:14px;font-weight:600}
+.relay small{color:var(--mut)}
+.sw{width:48px;height:28px;border-radius:99px;background:#3a4472;position:relative;transition:.2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s}
+.relay.on .sw{background:var(--ok)}
+.relay.on .sw::after{left:23px}
+.allrow{display:flex;gap:10px;margin-top:10px}
+.allrow button{flex:1;border:0;border-radius:14px;padding:11px;font-weight:600;color:var(--txt);background:#26305c}
+/* voice */
+.voice{display:flex;flex-direction:column;align-items:center;gap:12px}
+.mic{width:92px;height:92px;border-radius:50%;border:0;font-size:40px;color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 0 0 0 rgba(79,140,255,.6)}
+.mic.listen{animation:pulse 1.2s infinite;background:linear-gradient(135deg,var(--bad),#ff8a5d)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,93,115,.6)}100%{box-shadow:0 0 0 28px rgba(255,93,115,0)}}
+.heard{min-height:22px;font-size:15px;text-align:center}
+.say{color:var(--mut);font-size:12px;text-align:center;line-height:1.6}
+/* servo */
+.angle{font-size:40px;font-weight:700;text-align:center;margin-bottom:4px}
+.angle span{font-size:18px;color:var(--mut)}
+input[type=range]{width:100%;-webkit-appearance:none;height:10px;border-radius:99px;background:#2a3566;outline:none;margin:14px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--acc),var(--acc2));border:3px solid #fff}
+.ticks{display:flex;justify-content:space-between;color:var(--mut);font-size:12px}
+.presets{display:flex;gap:8px;margin-top:12px}
+.presets button{flex:1;border:0;border-radius:12px;padding:9px;background:#26305c;color:var(--txt);font-weight:600}
+/* connect bar */
+.bar{position:fixed;left:0;right:0;bottom:0;padding:14px 16px 20px;background:linear-gradient(transparent,var(--bg) 35%)}
+.bar button{display:block;width:100%;max-width:560px;margin:auto;border:0;border-radius:18px;padding:17px;font-size:17px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 8px 24px rgba(79,140,255,.4)}
+.bar button.conn{background:linear-gradient(135deg,#1fb77e,#2ee59d);color:#04261a}
+/* sheet */
+.back{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:.25s;z-index:10}
+.back.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-radius:26px 26px 0 0;padding:18px 16px 24px;transform:translateY(105%);transition:.3s;z-index:11;max-height:86vh;overflow:auto}
+.sheet.show{transform:none}
+.sheet .grab{width:44px;height:5px;border-radius:9px;background:#3a4472;margin:0 auto 14px}
+.sheet h3{margin:0 0 4px}
+.row{display:flex;gap:8px;margin:10px 0}
+.row input{flex:1;min-width:0;border:1px solid #34406f;background:#0f1530;color:var(--txt);border-radius:14px;padding:13px;font-size:15px;user-select:text}
+.btn{border:0;border-radius:14px;padding:13px 16px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--acc),var(--acc2))}
+.btn.ghost{background:#26305c}
+.dev{display:flex;align-items:center;gap:12px;background:#1e2850;border-radius:16px;padding:13px;margin-top:8px}
+.dev .di{font-size:24px}
+.dev .tx{flex:1;min-width:0}
+.dev b{display:block;font-size:14px}
+.dev small{color:var(--mut);font-size:12px}
+.sec{color:var(--mut);font-size:12px;margin:14px 0 2px;text-transform:uppercase;letter-spacing:.6px;display:flex;justify-content:space-between}
+.prog{height:4px;background:#26305c;border-radius:9px;overflow:hidden;margin-top:8px;display:none}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2))}
+.toast{position:fixed;left:50%;top:18px;transform:translate(-50%,-90px);background:#222c58;padding:11px 18px;border-radius:14px;font-size:14px;z-index:30;transition:.3s;box-shadow:0 6px 20px rgba(0,0,0,.4);max-width:90%}
+.toast.show{transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div><h1>NodeMCU Control</h1><p>Car • Home • Voice • Servo</p></div>
+  <div class="pill"><span class="dot" id="dot"></span><span id="stat">Offline</span></div>
+</header>
+
+<main id="main" >
+  <!-- CAR -->
+  <section class="card" id="carCard">
+    <h2><span class="ic">🚗</span>Car Control</h2>
+    <div class="dpad">
+      <span></span><button data-d="F">▲</button><span></span>
+      <button data-d="L">◀</button><button class="stop" data-d="S">STOP</button><button data-d="R">▶</button>
+      <span></span><button data-d="B">▼</button><span></span>
+    </div>
+    <div class="hint">Press &amp; hold to move • release to stop</div>
+  </section>
+
+  <!-- HOME -->
+  <section class="card">
+    <h2><span class="ic">🏠</span>Home Control</h2>
+    <div class="grid2" id="relays"></div>
+    <div class="allrow">
+      <button id="allOn">All ON</button><button id="allOff">All OFF</button>
+    </div>
+  </section>
+
+  <!-- VOICE -->
+  <section class="card">
+    <h2><span class="ic">🎙️</span>Voice Control</h2>
+    <div class="voice">
+      <button class="mic" id="mic">🎤</button>
+      <div class="heard" id="heard">Tap the mic and speak</div>
+      <div class="say">Try: “light on” • “fan off” • “relay 3 on” • “all off”<br>“forward” • “back” • “left” • “right” • “stop” • “servo 90”</div>
+    </div>
+  </section>
+
+  <!-- SERVO -->
+  <section class="card">
+    <h2><span class="ic">⚙️</span>Servo Motor</h2>
+    <div class="angle"><b id="angv">90</b><span>°</span></div>
+    <input type="range" id="servo" min="0" max="180" value="90">
+    <div class="ticks"><span>0°</span><span>90°</span><span>180°</span></div>
+    <div class="presets"><button data-a="0">0°</button><button data-a="90">90°</button><button data-a="180">180°</button></div>
+  </section>
+</main>
+
+<div class="bar"><button id="connBtn">🔌 Connect</button></div>
+
+<!-- Connect sheet -->
+<div class="back" id="back"></div>
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <h3>Connect to device</h3>
+  <small style="color:var(--mut)">Phone and NodeMCU must be on the same Wi-Fi (or phone joined to NodeMCU's own hotspot).</small>
+
+  <div class="row">
+    <input id="addr" placeholder="IP (192.168.1.50) or MAC (AA:BB:CC:...)" autocapitalize="off" autocomplete="off">
+    <button class="btn" id="goBtn">Connect</button>
+  </div>
+
+  <div class="sec"><span>Available devices</span><span id="scanInfo"></span></div>
+  <div class="row" style="margin:6px 0">
+    <input id="subnet" placeholder="Network e.g. 192.168.1" style="flex:1">
+    <button class="btn ghost" id="scanBtn">🔍 Scan</button>
+  </div>
+  <div class="prog" id="prog"><i id="progI"></i></div>
+  <div id="devs"></div>
+
+  <div class="sec"><span>Saved</span></div>
+  <div id="saved"></div>
+  <button class="btn ghost" id="disc" style="width:100%;margin-top:14px;display:none">Disconnect</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const LS={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- state ---------- */
+let base=null;               // e.g. http://192.168.1.50
+let devName='';
+const relayNames=LS.get('rn',['Light','Fan','Socket','Pump']);
+const relayIcons=['💡','🌀','🔌','💧'];
+const relayState=[0,0,0,0];
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200)}
+function setConn(on){
+  $('#dot').classList.toggle('on',on);$('#stat').textContent=on?(devName||base.replace('http://','')):'Offline';
+  const b=$('#connBtn');b.classList.toggle('conn',on);b.textContent=on?'✅ Connected • tap to manage':'🔌 Connect';
+  $('#disc').style.display=on?'block':'none';
+}
+
+/* ---------- network ---------- */
+async function api(path,timeout=2500){
+  if(!base){toast('Not connected');return null}
+  const c=new AbortController();const t=setTimeout(()=>c.abort(),timeout);
+  try{const r=await fetch(base+path,{signal:c.signal});clearTimeout(t);return await r.json()}
+  catch(e){clearTimeout(t);return null}
+}
+async function ping(ip,timeout=1200){
+  const c=new AbortController();const t=setTimeout(()=>c.abort(),timeout);
+  try{const r=await fetch('http://'+ip+'/ping',{signal:c.signal});clearTimeout(t);const j=await r.json();return j&&j.device==='nodemcu'?{...j,ip}:null}
+  catch(e){clearTimeout(t);return null}
+}
+async function connectIP(ip){
+  toast('Connecting to '+ip+' …');
+  const d=await ping(ip,3000);
+  if(!d){toast('❌ No NodeMCU found at '+ip);return false}
+  base='http://'+ip;devName=d.name||ip;setConn(true);
+  LS.set('last',ip);saveDevice(d);
+  closeSheet();toast('✅ Connected to '+devName);
+  const s=await api('/status');
+  if(s){(s.relays||[]).forEach((v,i)=>setRelayUI(i,v));if(s.servo!=null){$('#servo').value=s.servo;$('#angv').textContent=s.servo}}
+  return true;
+}
+function disconnect(){base=null;devName='';setConn(false);closeSheet();toast('Disconnected')}
+
+/* ---------- saved devices ---------- */
+function saveDevice(d){const l=LS.get('saved',[]).filter(x=>x.ip!==d.ip);l.unshift({ip:d.ip,name:d.name||d.ip,mac:d.mac||''});LS.set('saved',l.slice(0,8));renderSaved()}
+function devRow(d,tag){
+  const e=document.createElement('div');e.className='dev';
+  e.innerHTML=`<div class="di">📟</div><div class="tx"><b>${d.name||'NodeMCU'}</b><small>${d.ip}${d.mac?' • '+d.mac:''}</small></div><span style="color:var(--acc);font-weight:700">${tag||'Connect'}</span>`;
+  e.onclick=()=>connectIP(d.ip);return e;
+}
+function renderSaved(){const w=$('#saved');w.innerHTML='';const l=LS.get('saved',[]);if(!l.length){w.innerHTML='<small style="color:var(--mut)">No saved devices yet</small>';return}l.forEach(d=>w.appendChild(devRow(d)))}
+
+/* ---------- scan ---------- */
+let scanning=false,found=[];
+async function scan(wantMac){
+  if(scanning)return;scanning=true;found=[];$('#devs').innerHTML='';
+  let sn=$('#subnet').value.trim().replace(/\.$/,'');
+  if(!/^\d+\.\d+\.\d+$/.test(sn)){sn=LS.get('subnet','192.168.1')}
+  LS.set('subnet',sn);$('#subnet').value=sn;
+  const ips=['192.168.4.1'];for(let i=1;i<255;i++)ips.push(sn+'.'+i);
+  const prog=$('#prog');prog.style.display='block';$('#scanBtn').textContent='Scanning…';
+  let done=0,idx=0,hit=null;
+  const add=d=>{if(found.find(x=>x.ip===d.ip))return;found.push(d);$('#devs').appendChild(devRow(d));if(wantMac&&d.mac&&d.mac.toUpperCase()===wantMac)hit=d};
+  async function worker(){while(idx<ips.length&&!hit){const ip=ips[idx++];const d=await ping(ip);if(d)add(d);done++;$('#progI').style.width=(done/ips.length*100)+'%';$('#scanInfo').textContent=found.length+' found'}}
+  await Promise.all(Array.from({length:30},worker));
+  scanning=false;prog.style.display='none';$('#scanBtn').textContent='🔍 Scan';
+  if(!found.length)$('#devs').innerHTML='<small style="color:var(--mut)">No devices found. Check Wi-Fi / network prefix, or enter the IP manually.</small>';
+  return hit;
+}
+async function go(){
+  const v=$('#addr').value.trim();if(!v)return toast('Enter IP or MAC');
+  if(/^([0-9a-f]{2}[:\-]){5}[0-9a-f]{2}$/i.test(v)){
+    const mac=v.toUpperCase().replace(/-/g,':');toast('Searching network for '+mac+' …');
+    const d=await scan(mac);
+    if(d)connectIP(d.ip);else toast('MAC not found on this network');
+  }else connectIP(v.replace(/^https?:\/\//,'').replace(/\/$/,''));
+}
+
+/* ---------- sheet ---------- */
+function openSheet(){$('#back').classList.add('show');$('#sheet').classList.add('show');$('#subnet').value=LS.get('subnet','192.168.1');renderSaved()}
+function closeSheet(){$('#back').classList.remove('show');$('#sheet').classList.remove('show')}
+$('#connBtn').onclick=openSheet;$('#back').onclick=closeSheet;
+$('#goBtn').onclick=go;$('#scanBtn').onclick=()=>scan();$('#disc').onclick=disconnect;
+
+/* ---------- relays ---------- */
+const rw=$('#relays');
+relayNames.forEach((n,i)=>{
+  const e=document.createElement('div');e.className='relay';e.id='r'+i;
+  e.innerHTML=`<div class="top"><span class="ico">${relayIcons[i]}</span><div class="sw"></div></div><div><div class="nm">${n}</div><small>Relay ${i+1} • <span class="st">OFF</span></small></div>`;
+  e.onclick=()=>setRelay(i,relayState[i]?0:1);rw.appendChild(e);
+});
+function setRelayUI(i,v){relayState[i]=v?1:0;const e=$('#r'+i);e.classList.toggle('on',!!v);e.querySelector('.st').textContent=v?'ON':'OFF'}
+async function setRelay(i,v){
+  if(!base)return toast('Connect to a device first');
+  setRelayUI(i,v);const r=await api('/relay?n='+(i+1)+'&s='+v);
+  if(!r){toast('⚠️ Command failed');setRelayUI(i,v?0:1)}
+}
+$('#allOn').onclick=()=>[0,1,2,3].forEach(i=>setRelay(i,1));
+$('#allOff').onclick=()=>[0,1,2,3].forEach(i=>setRelay(i,0));
+
+/* ---------- servo ---------- */
+let sT=null;
+function setServo(a,instant){
+  a=Math.max(0,Math.min(180,Math.round(a)));$('#servo').value=a;$('#angv').textContent=a;
+  clearTimeout(sT);const send=()=>base&&api('/servo?a='+a);
+  instant?send():sT=setTimeout(send,60);
+}
+$('#servo').addEventListener('input',e=>{if(!base)toast('Connect to a device first');setServo(+e.target.value)});
+document.querySelectorAll('.presets button').forEach(b=>b.onclick=()=>{if(!base)return toast('Connect to a device first');setServo(+b.dataset.a,true)});
+
+/* ---------- car ---------- */
+let carTimer=null;
+function car(d){if(!base)return;api('/car?d='+d,1500)}
+document.querySelectorAll('.dpad button').forEach(b=>{
+  const d=b.dataset.d;
+  const start=e=>{e.preventDefault();if(!base)return toast('Connect to a device first');b.classList.add('hold');car(d);if(d!=='S'){clearInterval(carTimer);carTimer=setInterval(()=>car(d),400)}};
+  const end=e=>{e.preventDefault();if(!b.classList.contains('hold'))return;b.classList.remove('hold');clearInterval(carTimer);if(d!=='S')car('S')};
+  b.addEventListener('touchstart',start,{passive:false});b.addEventListener('touchend',end);b.addEventListener('touchcancel',end);
+  b.addEventListener('mousedown',start);b.addEventListener('mouseup',end);b.addEventListener('mouseleave',end);
+});
+
+/* ---------- voice ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null,listening=false;
+const words={one:1,won:1,two:2,to:2,too:2,three:3,four:4,for:4,zero:0};
+function num(t){const m=t.match(/\d+/);if(m)return +m[0];for(const w in words)if(new RegExp('\\b'+w+'\\b').test(t))return words[w];return null}
+function handleVoice(t){
+  t=t.toLowerCase().trim();$('#heard').textContent='“'+t+'”';
+  const on=/\b(on|start|open|enable)\b/.test(t),off=/\b(off|close|disable)\b/.test(t);
+  if(/\bservo\b|\bangle\b|\brotate\b/.test(t)){
+    if(/\bcenter|centre|middle\b/.test(t))return setServo(90,true);
+    const n=t.match(/\d+/);if(n)return setServo(+n[0],true);
+  }
+  if(/\ball\b|\beverything\b/.test(t)&&(on||off)){[0,1,2,3].forEach(i=>setRelay(i,on?1:0));return toast(on?'All ON':'All OFF')}
+  const names=relayNames.map(n=>n.toLowerCase());
+  let idx=names.findIndex(n=>t.includes(n));
+  if(idx<0&&/relay|switch/.test(t)){const n=num(t.replace(/(on|off)/g,''));if(n>=1&&n<=4)idx=n-1}
+  if(idx>=0&&(on||off)){setRelay(idx,on&&!off?1:0);return toast(relayNames[idx]+(on&&!off?' ON':' OFF'))}
+  if(/\bforward|ahead|straight\b/.test(t))return car('F');
+  if(/\bback|reverse|backward\b/.test(t))return car('B');
+  if(/\bleft\b/.test(t))return car('L');
+  if(/\bright\b/.test(t))return car('R');
+  if(/\bstop|halt|brake\b/.test(t))return car('S');
+  toast('Command not recognised');
+}
+function micWeb(){
+  if(!SR)return toast('Voice not supported on this device');
+  if(!base)return toast('Connect to a device first');
+  if(listening){rec&&rec.stop();return}
+  rec=new SR();rec.lang='en-IN';rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onstart=()=>{listening=true;$('#mic').classList.add('listen');$('#heard').textContent='Listening…'};
+  rec.onend=()=>{listening=false;$('#mic').classList.remove('listen')};
+  rec.onerror=e=>{$('#heard').textContent=e.error==='not-allowed'?'Mic permission denied':'Try again ('+e.error+')'};
+  rec.onresult=e=>handleVoice(e.results[0][0].transcript);
+  rec.start();
+}
+
+async function micNative(P){
+  if(!base)return toast('Connect to a device first');
+  try{
+    if(listening){await P.stop();return}
+    const av=await P.available();if(!av.available)return toast('Speech recognition not available on this phone');
+    let pm=await P.checkPermissions();
+    if(pm.speechRecognition!=='granted'){pm=await P.requestPermissions();if(pm.speechRecognition!=='granted')return toast('Microphone permission denied')}
+    listening=true;$('#mic').classList.add('listen');$('#heard').textContent='Listening…';
+    const r=await P.start({language:'en-IN',maxResults:1,prompt:'Say a command',partialResults:false,popup:false});
+    if(r&&r.matches&&r.matches[0])handleVoice(r.matches[0]);else $('#heard').textContent="Didn't catch that, try again";
+  }catch(e){$('#heard').textContent='Try again';}
+  finally{listening=false;$('#mic').classList.remove('listen')}
+}
+$('#mic').onclick=()=>{
+  const P=window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.SpeechRecognition;
+  if(P)micNative(P);else micWeb();
+};
+
+/* ---------- init ---------- */
+setConn(false);
+const last=LS.get('last');if(last)setTimeout(()=>ping(last,1500).then(d=>{if(d)connectIP(last)}),300);
+</script>
+</body>
+</html>
